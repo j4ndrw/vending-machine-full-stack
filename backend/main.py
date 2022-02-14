@@ -70,8 +70,8 @@ def update_user_role(username: str) -> Response:
     "/api/vendingmachine/users/<username>",
     methods=["DELETE"]
 )
-def delete_user(username) -> Response:
-    return vending_machine_api.delete_user(username)
+def delete_account(username: str) -> Response:
+    return vending_machine_api.delete_account(username)
 
 
 @app.route(

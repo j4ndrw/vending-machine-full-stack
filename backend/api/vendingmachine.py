@@ -325,3 +325,29 @@ class VendingMachine:
             mimetype="application/json",
             status=200
         )
+
+    @verify_auth(API_CONFIG)
+    @handle_exc
+    @log_endpoint
+    def delete_account(self, username: str) -> Response:
+
+        user = self.db_session.query(User)\
+            .filter_by(username=username)\
+            .first()
+
+        if not user:
+            return Response(
+                json.dumps({"message": "No such user"}),
+                mimetype="application/json",
+                status=404
+            )
+
+        self.db_session.delete(user)
+        self.db_session.commit()
+
+        return Response(
+            json.dumps(
+                {"message": "We're sorry to see you going... Hope you get back soon!"}),
+            mimetype="application/json",
+            status=200
+        )
