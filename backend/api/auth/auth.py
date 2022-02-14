@@ -1,3 +1,4 @@
+from typing import Union
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import request, Response, Flask
@@ -9,8 +10,8 @@ from models.user import User
 from hashlib import sha256
 
 
-def hash_password(password: str) -> str:
-    return sha256(password.encode()).hexdigest()
+def hash_password(password: Union[str, int]) -> str:
+    return sha256(str(password).encode()).hexdigest()
 
 
 def create_token(app: Flask, username: str) -> str:
