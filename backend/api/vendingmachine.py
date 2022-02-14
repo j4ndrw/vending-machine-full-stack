@@ -10,7 +10,7 @@ from models.user import User
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from api.auth.auth import create_token, hash_password, token_required
+from api.auth.auth import create_token, hash_password, verify_auth
 from api.utils import handle_exc, log_endpoint, validate_payload
 
 
@@ -47,7 +47,7 @@ class VendingMachine:
         ]
     )
     @log_endpoint
-    def create_user(self) -> Response:
+    def register(self) -> Response:
         payload: Dict = request.get_json()
 
         username = payload["username"]
@@ -92,7 +92,38 @@ class VendingMachine:
         return Response(
             json.dumps({
                 "message": f"Thanks for registering, {username}!",
-                "token": token
+                "token": token,
+            }),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth
+    @handle_exc
+    @log_endpoint
+    def refresh_token(self, username: str) -> Response:
+        user = self.db_session.query(User)\
+            .filter_by(username=username)\
+            .first()
+
+        if not user:
+            return Response(
+                json.dumps({
+                    "message": "No such user"
+                }),
+                mimetype="application/json",
+                status="403"
+            )
+
+        token = create_token(self.app, user.username)
+
+        self.db_session.add(user)
+        self.db_session.commit()
+
+        return Response(
+            json.dumps({
+                "message": "Token refreshed",
+                "token": token,
             }),
             mimetype="application/json",
             status=200
@@ -150,7 +181,40 @@ class VendingMachine:
             status=200
         )
 
-    @token_required
+    @verify_auth
+    @validate_payload(necessary_keys=["username"])
+    @log_endpoint
+    def logout(self):
+        payload: Dict = request.get_json()
+
+        username = payload["username"]
+
+        user = self.db_session.query(User)\
+            .filter_by(username=username)\
+            .first()
+
+        if not user:
+            return Response(
+                json.dumps({
+                    "message": "This user does not exist. Try registering first."
+                }),
+                mimetype="application/json",
+                status="404"
+            )
+
+        user.logged_in = False
+
+        self.db_session.commit()
+
+        return Response(
+            json.dumps({
+                "message": f"Get back soon, {username}!",
+            }),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth
     @handle_exc
     @log_endpoint
     def get_user(self, username: str) -> Response:

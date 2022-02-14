@@ -22,8 +22,24 @@ CORS(
     "/api/vendingmachine/register",
     methods=["POST"]
 )
-def create_user() -> Response:
-    return vending_machine_api.create_user()
+def register() -> Response:
+    return vending_machine_api.register()
+
+
+@app.route(
+    "/api/vendingmachine/login",
+    methods=["POST"]
+)
+def login() -> Response:
+    return vending_machine_api.login()
+
+
+@app.route(
+    "/api/vendingmachine/logout",
+    methods=["PUT"]
+)
+def logout() -> Response:
+    return vending_machine_api.logout()
 
 
 @app.route(
@@ -133,19 +149,11 @@ def reset_deposit() -> Response:
 
 
 @app.route(
-    "/api/vendingmachine/login",
-    methods=["POST"]
+    "/api/vendingmachine/token/refresh/<username>",
+    methods=["GET"]
 )
-def login() -> Response:
-    return vending_machine_api.login()
-
-
-@app.route(
-    "/api/vendingmachine/logout",
-    methods=["PUT"]
-)
-def logout() -> Response:
-    return vending_machine_api.logout()
+def refresh_token(username: str) -> Response:
+    return vending_machine_api.refresh_token(username)
 
 
 if __name__ == "__main__":
