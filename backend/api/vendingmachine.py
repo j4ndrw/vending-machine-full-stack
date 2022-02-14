@@ -4,6 +4,8 @@ from typing import Dict
 
 import jwt
 from flask import Flask, Response, request
+from api.operation import Operation
+from api.retrieval import Retrieval
 from models.product import Product
 from models.role import USER_ROLES
 from models.user import User
@@ -11,7 +13,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from api.auth.auth import create_token, get_token_from_headers, hash_password, verify_auth
-from api.utils import handle_exc, log_endpoint, validate_payload
+from api.utils import handle_exc, log_endpoint
 
 API_CONFIG = {
     "app": None,
@@ -48,14 +50,10 @@ class VendingMachine:
         User.metadata.create_all(bind=self.engine)
         Product.metadata.create_all(bind=self.engine)
 
+        self.retrieval = Retrieval(self.db_session)
+        self.operation = Operation(self.db_session)
+
     @handle_exc
-    @validate_payload(
-        necessary_keys=[
-            "username",
-            "password",
-            "role"
-        ]
-    )
     @log_endpoint
     def register(self) -> Response:
         payload: Dict = request.get_json()
@@ -66,27 +64,19 @@ class VendingMachine:
 
         password = hash_password(password)
 
-        user = self.db_session.query(User)\
-            .filter_by(username=username)\
-            .first()
-
+        user, _ = self.retrieval.get_user(username)
         if user:
             return Response(
                 json.dumps({
-                    "message": "There is already a user with this username!"
+                    "message": "There is already a user registered with this username"
                 }),
                 mimetype="application/json",
                 status="403"
             )
 
-        if role not in USER_ROLES:
-            return Response(
-                json.dumps({
-                    "message": "The user must be a buyer or a seller!"
-                }),
-                mimetype="application/json",
-                status="403"
-            )
+        err = self.operation.validate_role(role)
+        if err:
+            return err
 
         user = User(
             username=username,
@@ -108,22 +98,13 @@ class VendingMachine:
             status=200
         )
 
-    @verify_auth(API_CONFIG)
+    @verify_auth(API_CONFIG, strict=True)
     @handle_exc
     @log_endpoint
     def refresh_token(self, username: str) -> Response:
-        user = self.db_session.query(User)\
-            .filter_by(username=username)\
-            .first()
-
-        if not user:
-            return Response(
-                json.dumps({
-                    "message": "No such user"
-                }),
-                mimetype="application/json",
-                status="403"
-            )
+        user, err = self.retrieval.get_user(username)
+        if err:
+            return err
 
         token = create_token(self.app, user.username)
 
@@ -139,12 +120,7 @@ class VendingMachine:
             status=200
         )
 
-    @validate_payload(
-        necessary_keys=[
-            "username",
-            "password",
-        ]
-    )
+    @handle_exc
     @log_endpoint
     def login(self):
         payload: Dict = request.get_json()
@@ -154,18 +130,12 @@ class VendingMachine:
 
         password = hash_password(password)
 
-        user = self.db_session.query(User)\
-            .filter_by(username=username)\
-            .first()
-
-        if not user:
-            return Response(
-                json.dumps({
-                    "message": "This user does not exist. Try registering first."
-                }),
-                mimetype="application/json",
-                status="404"
-            )
+        user, err = self.retrieval.get_user(
+            username,
+            err_msg="This user does not exist. Try registering first."
+        )
+        if err:
+            return err
 
         if password != user.password:
             return Response(
@@ -205,26 +175,19 @@ class VendingMachine:
             status=200
         )
 
-    @verify_auth(API_CONFIG)
-    @validate_payload(necessary_keys=["username"])
+    @verify_auth(API_CONFIG, strict=True)
     @log_endpoint
     def logout(self):
         payload: Dict = request.get_json()
 
         username = payload["username"]
 
-        user = self.db_session.query(User)\
-            .filter_by(username=username)\
-            .first()
-
-        if not user:
-            return Response(
-                json.dumps({
-                    "message": "This user does not exist. Try registering first."
-                }),
-                mimetype="application/json",
-                status="404"
-            )
+        user, err = self.retrieval.get_user(
+            username,
+            err_msg="This user does not exist. Try registering first."
+        )
+        if err:
+            return err
 
         if not user.logged_in:
             return Response(
@@ -247,22 +210,13 @@ class VendingMachine:
             status=200
         )
 
-    @verify_auth(API_CONFIG)
+    @verify_auth(API_CONFIG, strict=True)
     @handle_exc
     @log_endpoint
     def get_current_user(self, username: str) -> Response:
-        user = self.db_session.query(User)\
-            .filter_by(username=username)\
-            .first()
-
-        if not user:
-            return Response(
-                json.dumps({
-                    "message": "No such user"
-                }),
-                mimetype="application/json",
-                status="404"
-            )
+        user, err = self.retrieval.get_user(username)
+        if err:
+            return err
 
         return Response(
             json.dumps(user.to_json()),
@@ -287,34 +241,21 @@ class VendingMachine:
             status=200
         )
 
-    @verify_auth(API_CONFIG)
+    @verify_auth(API_CONFIG, strict=True)
     @handle_exc
-    @validate_payload(necessary_keys=["role"])
     @log_endpoint
     def update_user_role(self, username: str) -> Response:
         payload = request.get_json()
 
         role = payload["role"]
 
-        if role not in USER_ROLES:
-            return Response(
-                json.dumps({
-                    "message": "The user must be a buyer or a seller!"
-                }),
-                mimetype="application/json",
-                status="403"
-            )
+        err = self.operation.validate_role(role)
+        if err:
+            return err
 
-        user = self.db_session.query(User)\
-            .filter_by(username=username)\
-            .first()
-
-        if not user:
-            return Response(
-                json.dumps({"message": "No such user"}),
-                mimetype="application/json",
-                status=404
-            )
+        user, err = self.retrieval.get_user(username)
+        if err:
+            return err
 
         user.role = role
 
@@ -326,21 +267,13 @@ class VendingMachine:
             status=200
         )
 
-    @verify_auth(API_CONFIG)
+    @verify_auth(API_CONFIG, strict=True)
     @handle_exc
     @log_endpoint
     def delete_account(self, username: str) -> Response:
-
-        user = self.db_session.query(User)\
-            .filter_by(username=username)\
-            .first()
-
-        if not user:
-            return Response(
-                json.dumps({"message": "No such user"}),
-                mimetype="application/json",
-                status=404
-            )
+        user, err = self.retrieval.get_user(username)
+        if err:
+            return err
 
         self.db_session.delete(user)
         self.db_session.commit()
@@ -348,6 +281,112 @@ class VendingMachine:
         return Response(
             json.dumps(
                 {"message": "We're sorry to see you going... Hope you get back soon!"}),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth(API_CONFIG, strict=True)
+    @handle_exc
+    @log_endpoint
+    def create_product(self) -> Response:
+        payload = request.get_json()
+
+        username = payload["username"]
+        cost = payload["cost"]
+        product_name = payload["product_name"]
+
+        if cost < 0:
+            return Response(
+                json.dumps({"message": "The cost must be positive or 0!"}),
+                mimetype="application/json",
+                status=400
+            )
+
+        user, err = self.retrieval.get_user(username)
+        if err:
+            return err
+
+        existing_product = self.db_session.query(Product)\
+            .filter_by(
+                seller_id=user.id,
+                product_name=product_name
+        )\
+            .first()
+
+        if existing_product:
+            existing_product.amount_available += 1
+            existing_product.cost = cost
+            self.db_session.commit()
+
+            return Response(
+                json.dumps({
+                    "message": f"Product added successfully ({existing_product.amount_available} products)"
+                }),
+                mimetype="application/json",
+                status=200
+            )
+
+        product = Product(
+            cost=cost,
+            product_name=product_name,
+            seller_id=user.username
+        )
+
+        self.db_session.add(product)
+        self.db_session.commit()
+
+        return Response(
+            json.dumps({"message": "New product added successfully"}),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth(API_CONFIG)
+    @handle_exc
+    @log_endpoint
+    def get_product(self, product_id) -> Response:
+        product, err = self.retrieval.get_product(product_id)
+        if err:
+            return err
+
+        return Response(
+            json.dumps(product.to_json()),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth(API_CONFIG)
+    @handle_exc
+    @log_endpoint
+    def get_products(self) -> Response:
+        products = self.db_session.query(Product)
+
+        return Response(
+            json.dumps({
+                "products": [*map(
+                    lambda user: user.to_json(),
+                    products.all()
+                )]
+            }),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth(API_CONFIG)
+    @handle_exc
+    @log_endpoint
+    def get_products_from_user(self, username: str) -> Response:
+        user, err = self.retrieval.get_user(username)
+        if err:
+            return err
+
+        products = self.retrieval.get_products_from_user(
+            username,
+            role=user.role
+        )
+
+        return Response(
+            json.dumps({"products": products}),
             mimetype="application/json",
             status=200
         )

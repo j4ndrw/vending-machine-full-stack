@@ -99,7 +99,7 @@ def get_products() -> Response:
 
 
 @app.route(
-    "/api/vendingmachine/products/<username>",
+    "/api/vendingmachine/products/from/<username>",
     methods=["GET"]
 )
 def get_products_from_user(username: str) -> Response:

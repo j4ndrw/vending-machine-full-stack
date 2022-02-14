@@ -16,20 +16,19 @@ class Product(Model):
 
         # Since the seller is a user, we'll use the user's ID.
         # We'll validate on the role in the implementation
-        ForeignKey("users.userId"),
+        ForeignKey("users.username"),
         nullable=False
     )
 
     buyer_id = Column(
         "buyerId",
-        ForeignKey("users.userId"),
+        ForeignKey("users.username"),
         nullable=True
     )
 
     amount_available = Column(
         'amountAvailable',
         Integer(),
-        default=0,
         nullable=False
     )
 
@@ -45,11 +44,11 @@ class Product(Model):
     def __init__(
         self,
         *,
-        amount_available,
-        cost,
+        amount_available=0,
+        cost=0,
         product_name,
         seller_id,
-        buyer_id
+        buyer_id=None
     ):
         self.amount_available = amount_available
         self.cost = cost
@@ -59,6 +58,7 @@ class Product(Model):
 
     def to_json(self):
         return dict(
+            product_id=self.id,
             amount_available=self.amount_available,
             cost=self.cost,
             product_name=self.product_name,
