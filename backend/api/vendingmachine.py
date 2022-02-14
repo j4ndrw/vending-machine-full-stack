@@ -286,3 +286,42 @@ class VendingMachine:
             mimetype="application/json",
             status=200
         )
+
+    @verify_auth(API_CONFIG)
+    @handle_exc
+    @validate_payload(necessary_keys=["role"])
+    @log_endpoint
+    def update_user_role(self, username: str) -> Response:
+        payload = request.get_json()
+
+        role = payload["role"]
+
+        if role not in USER_ROLES:
+            return Response(
+                json.dumps({
+                    "message": "The user must be a buyer or a seller!"
+                }),
+                mimetype="application/json",
+                status="403"
+            )
+
+        user = self.db_session.query(User)\
+            .filter_by(username=username)\
+            .first()
+
+        if not user:
+            return Response(
+                json.dumps({"message": "No such user"}),
+                mimetype="application/json",
+                status=404
+            )
+
+        user.role = role
+
+        self.db_session.commit()
+
+        return Response(
+            json.dumps({"message": "User role updated successfully"}),
+            mimetype="application/json",
+            status=200
+        )

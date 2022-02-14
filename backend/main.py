@@ -62,8 +62,8 @@ def get_users() -> Response:
     "/api/vendingmachine/users/<username>",
     methods=["PUT"]
 )
-def update_user(username) -> Response:
-    return vending_machine_api.update_user(username)
+def update_user_role(username: str) -> Response:
+    return vending_machine_api.update_user_role(username)
 
 
 @app.route(
