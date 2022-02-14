@@ -5,7 +5,7 @@ from hashlib import sha256
 from typing import Union
 
 import jwt
-from flask import Flask, Response, request
+from flask import Flask, Response, request, Request
 from models.user import User
 from sqlalchemy.orm import scoped_session
 
@@ -19,6 +19,10 @@ def create_token(app: Flask, username: str) -> str:
         'username': username,
         'exp': datetime.utcnow() + timedelta(minutes=30)
     }, app.config['SECRET'])
+
+
+def get_token_from_headers(request: Request) -> str:
+    return request.headers["x-access-token"]
 
 
 def validate_jwt(app: Flask, db_session: scoped_session):

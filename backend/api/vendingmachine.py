@@ -10,7 +10,7 @@ from models.user import User
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from api.auth.auth import create_token, hash_password, verify_auth
+from api.auth.auth import create_token, get_token_from_headers, hash_password, verify_auth
 from api.utils import handle_exc, log_endpoint, validate_payload
 
 
@@ -166,6 +166,20 @@ class VendingMachine:
                 status="403"
             )
 
+        if user.logged_in:
+            return Response(
+                json.dumps({
+                    "message": f"Welcome, {username}!",
+                    "token": (
+                        get_token_from_headers(request)
+                        or
+                        create_token(self.app, username)
+                    )
+                }),
+                mimetype="application/json",
+                status=200
+            )
+
         token = create_token(self.app, user.username)
 
         user.logged_in = True
@@ -233,6 +247,18 @@ class VendingMachine:
 
         return Response(
             json.dumps(user.to_json()),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth
+    @handle_exc
+    @log_endpoint
+    def get_users(self) -> Response:
+        user = self.db_session.query(User)
+
+        return Response(
+            json.dumps(user),
             mimetype="application/json",
             status=200
         )
