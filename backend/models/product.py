@@ -20,12 +20,6 @@ class Product(Model):
         nullable=False
     )
 
-    buyer_id = Column(
-        "buyerId",
-        ForeignKey("users.username"),
-        nullable=True
-    )
-
     amount_available = Column(
         'amountAvailable',
         Integer(),
@@ -48,13 +42,11 @@ class Product(Model):
         cost=0,
         product_name,
         seller_id,
-        buyer_id=None
     ):
         self.amount_available = amount_available
         self.cost = cost
         self.product_name = product_name
         self.seller_id = seller_id
-        self.buyer_id = buyer_id
 
     def to_json(self):
         return dict(
@@ -63,7 +55,6 @@ class Product(Model):
             cost=self.cost,
             product_name=self.product_name,
             seller_id=self.seller_id,
-            buyer_id=self.buyer_id
         )
 
     def __repr__(self):

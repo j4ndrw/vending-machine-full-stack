@@ -84,15 +84,12 @@ class VendingMachine:
             role=role,
         )
 
-        token = create_token(self.app, user.username)
-
         self.db_session.add(user)
         self.db_session.commit()
 
         return Response(
             json.dumps({
                 "message": f"Thanks for registering, {username}!",
-                "token": token,
             }),
             mimetype="application/json",
             status=200
@@ -295,6 +292,10 @@ class VendingMachine:
         cost = payload["cost"]
         product_name = payload["product_name"]
 
+        err = self.operation.validate_credits(cost, kind="cost")
+        if err:
+            return err
+
         if cost < 0:
             return Response(
                 json.dumps({"message": "The cost must be positive or 0!"}),
@@ -387,6 +388,218 @@ class VendingMachine:
 
         return Response(
             json.dumps({"products": products}),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth(API_CONFIG)
+    @handle_exc
+    @log_endpoint
+    def update_product(self, product_id: str) -> Response:
+        payload = request.get_json()
+
+        username = payload["username"]
+
+        user, err = self.retrieval.get_user(username)
+        if err:
+            return err
+
+        if user.role != "seller":
+            return Response(
+                json.dumps({"message": "Only sellers can delete products!"}),
+                mimetype="application/json",
+                status=403
+            )
+
+        product, err = self.retrieval.get_product(product_id)
+        if err:
+            return err
+
+        if product.seller_id != user.username:
+            return Response(
+                json.dumps(
+                    {"message": "You are not the owner of this product!"}),
+                mimetype="application/json",
+                status=403
+            )
+
+        self.db_session.delete(product)
+        self.db_session.commit()
+
+        return Response(
+            json.dumps({"message": "Product deleted successfully!"}),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth(API_CONFIG)
+    @handle_exc
+    @log_endpoint
+    def delete_product(self, product_id: str):
+        payload = request.get_json()
+
+        username = payload["username"]
+        cost = payload["cost"]
+        product_name = payload["product_name"]
+
+        err = self.operation.validate_credits(cost, kind="cost")
+        if err:
+            return err
+
+        user, err = self.retrieval.get_user(username)
+        if err:
+            return err
+
+        if user.role != "seller":
+            return Response(
+                json.dumps({"message": "Only sellers can update products!"}),
+                mimetype="application/json",
+                status=403
+            )
+
+        product, err = self.retrieval.get_product(product_id)
+        if err:
+            return err
+
+        if product.seller_id != user.username:
+            return Response(
+                json.dumps(
+                    {"message": "You are not the owner of this product!"}),
+                mimetype="application/json",
+                status=403
+            )
+
+        product.cost = cost
+        product.product_name = product_name
+
+        self.db_session.commit()
+
+        return Response(
+            json.dumps({"message": "Product updated successfully!"}),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth(API_CONFIG)
+    @handle_exc
+    @log_endpoint
+    def deposit(self) -> Response:
+        payload = request.get_json()
+
+        username = payload["username"]
+        deposit = payload["deposit"]
+
+        err = self.operation.validate_credits(deposit, kind="deposit")
+        if err:
+            return err
+
+        if deposit <= 0:
+            return Response(
+                json.dumps(
+                    {"message": "The deposit must be a positive amount"}),
+                mimetype="application/json",
+                status=400
+            )
+
+        user, err = self.retrieval.get_user(username)
+        if err:
+            return err
+
+        if user.role != "buyer":
+            return Response(
+                json.dumps({"message": "Only buyers can deposit money!"}),
+                mimetype="application/json",
+                status=403
+            )
+
+        user.deposit = deposit
+
+        self.db_session.commit()
+
+        return Response(
+            json.dumps(
+                {"message": f"You've successfully deposited {deposit} credits!"}),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth(API_CONFIG)
+    @handle_exc
+    @log_endpoint
+    def buy(self) -> Response:
+        payload = request.get_json()
+
+        username = payload["username"]
+        total = payload["total"]
+
+        err = self.operation.validate_credits(total, kind="total")
+        if err:
+            return err
+
+        if total <= 0:
+            return Response(
+                json.dumps(
+                    {"message": "The total must be a positive amount"}),
+                mimetype="application/json",
+                status=400
+            )
+
+        user, err = self.retrieval.get_user(username)
+        if err:
+            return err
+
+        if user.role != "buyer":
+            return Response(
+                json.dumps({"message": "Only buyers can buy!"}),
+                mimetype="application/json",
+                status=403
+            )
+
+        if user.deposit < total:
+            return Response(
+                json.dumps({"message": "Insufficient funds!"}),
+                mimetype="application/json",
+                status=403
+            )
+
+        user.deposit -= total
+
+        self.db_session.commit()
+
+        return Response(
+            json.dumps(
+                {"message": f"Thank you for purchasing from us!"}),
+            mimetype="application/json",
+            status=200
+        )
+
+    @verify_auth(API_CONFIG)
+    @handle_exc
+    @log_endpoint
+    def reset_deposit(self) -> Response:
+        payload = request.get_json()
+
+        username = payload["username"]
+
+        user, err = self.retrieval.get_user(username)
+        if err:
+            return err
+
+        if user.role != "buyer":
+            return Response(
+                json.dumps(
+                    {"message": "Only buyers can reset their deposit!"}),
+                mimetype="application/json",
+                status=403
+            )
+
+        user.deposit = 0
+
+        self.db_session.commit()
+
+        return Response(
+            json.dumps(
+                {"message": f"You've successfully reset your deposit!"}),
             mimetype="application/json",
             status=200
         )

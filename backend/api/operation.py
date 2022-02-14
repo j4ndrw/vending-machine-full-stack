@@ -1,5 +1,5 @@
 from api.utils import Error
-from typing import Optional
+from typing import Any, Optional
 from flask import Response
 from sqlalchemy.orm import scoped_session
 
@@ -19,5 +19,14 @@ class Operation:
                 }),
                 mimetype="application/json",
                 status="403"
+            )
+        return None
+
+    def validate_credits(self, credits: Any, kind: str) -> Optional[Error]:
+        if not isinstance(credits, int):
+            return Response(
+                json.dumps({"message": f"The {kind} must be an integer!"}),
+                mimetype="application/json",
+                status=400
             )
         return None

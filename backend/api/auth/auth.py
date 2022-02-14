@@ -77,14 +77,13 @@ def validate_jwt(
                 status=401
             )
 
-        current_time = datetime.utcnow().timestamp()
-        if data["exp"] - current_time <= 0:
-            return Response(
-                json.dumps(
-                    {'message': 'Session expired. Please login again.'}),
-                mimetype="application/json",
-                status=409
-            )
+    except jwt.exceptions.ExpiredSignatureError:
+        return Response(
+            json.dumps(
+                {'message': 'Session expired. Please login again.'}),
+            mimetype="application/json",
+            status=409
+        )
 
     except Exception as e:
         traceback.print_exc()
