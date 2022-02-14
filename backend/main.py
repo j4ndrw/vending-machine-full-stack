@@ -46,8 +46,8 @@ def logout() -> Response:
     "/api/vendingmachine/users/<username>",
     methods=["GET"]
 )
-def get_user(username: str) -> Response:
-    return vending_machine_api.get_user(username)
+def get_current_user(username: str) -> Response:
+    return vending_machine_api.get_current_user(username)
 
 
 @app.route(

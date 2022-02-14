@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta
 from functools import wraps
 from hashlib import sha256
-from typing import Union
+from typing import Callable, Dict, Union
 
 import jwt
 from flask import Flask, Response, request, Request
@@ -41,7 +41,7 @@ def validate_jwt(app: Flask, db_session: scoped_session):
 
     try:
         # decoding the payload to fetch the stored details
-        data = jwt.decode(token, app.config['SECRET'])
+        data = jwt.decode(token, app.config['SECRET'], algorithms=["HS256"])
         current_user = db_session.query(User)\
             .filter_by(username=data['username'])\
             .first()
@@ -54,7 +54,7 @@ def validate_jwt(app: Flask, db_session: scoped_session):
             )
 
         current_time = datetime.utcnow().timestamp()
-        if data["exp"] - current_time > 0:
+        if data["exp"] - current_time <= 0:
             return Response(
                 json.dumps(
                     {'message': 'Session expired. Please login again.'}),
@@ -62,7 +62,8 @@ def validate_jwt(app: Flask, db_session: scoped_session):
                 status=409
             )
 
-    except Exception:
+    except Exception as e:
+        print(e)
         return Response(
             json.dumps({'message': 'Token is invalid!'}),
             mimetype="application/json",
@@ -70,37 +71,16 @@ def validate_jwt(app: Flask, db_session: scoped_session):
         )
 
 
-def verify_auth(f):
-    def parameterized_decorator(app: Flask):
+def verify_auth(api_config: Dict):
+    def decorator(f: Callable):
         @wraps(f)
-        def decorated(*args, **kwargs):
-            token = None
-            # jwt is passed in the request header
-            if 'x-access-token' in request.headers:
-                token = request.headers['x-access-token']
-            # return 401 if token is not passed
-            if not token:
-                return Response(
-                    json.dumps({'message': 'Token is missing!'}),
-                    mimetype="application/json",
-                    status=401
-                )
-
-            try:
-                # decoding the payload to fetch the stored details
-                data = jwt.decode(token, app.config['SECRET'])
-                current_user = User.query\
-                    .filter_by(username=data['username'])\
-                    .first()
-            except Exception:
-                return Response(
-                    json.dumps({'message': 'Token is invalid!'}),
-                    mimetype="application/json",
-                    status=401
-                )
+        def wrapper(*args, **kwargs):
+            err = validate_jwt(api_config["app"], api_config["db_session"])
+            if err:
+                return err
 
             # returns the current logged in users contex to the routes
-            return f(current_user, *args, **kwargs)
+            return f(*args, **kwargs)
 
-        return decorated
-    return parameterized_decorator
+        return wrapper
+    return decorator

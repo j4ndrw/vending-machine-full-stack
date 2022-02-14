@@ -65,3 +65,6 @@ class Product(Model):
             seller_id=self.seller_id,
             buyer_id=self.buyer_id
         )
+
+    def __repr__(self):
+        return self.to_json()

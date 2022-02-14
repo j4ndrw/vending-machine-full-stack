@@ -13,6 +13,11 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from api.auth.auth import create_token, get_token_from_headers, hash_password, verify_auth
 from api.utils import handle_exc, log_endpoint, validate_payload
 
+API_CONFIG = {
+    "app": None,
+    "db_session": None
+}
+
 
 class VendingMachine:
     def __init__(self, app: Flask):
@@ -33,6 +38,11 @@ class VendingMachine:
                 bind=self.engine
             )
         )
+
+        API_CONFIG.update({
+            "app": self.app,
+            "db_session": self.db_session
+        })
 
         # Create tables from schemas if they don't exist
         User.metadata.create_all(bind=self.engine)
@@ -98,7 +108,7 @@ class VendingMachine:
             status=200
         )
 
-    @verify_auth
+    @verify_auth(API_CONFIG)
     @handle_exc
     @log_endpoint
     def refresh_token(self, username: str) -> Response:
@@ -195,7 +205,7 @@ class VendingMachine:
             status=200
         )
 
-    @verify_auth
+    @verify_auth(API_CONFIG)
     @validate_payload(necessary_keys=["username"])
     @log_endpoint
     def logout(self):
@@ -216,6 +226,15 @@ class VendingMachine:
                 status="404"
             )
 
+        if not user.logged_in:
+            return Response(
+                json.dumps({
+                    "message": "You're already logged out"
+                }),
+                mimetype="application/json",
+                status="404"
+            )
+
         user.logged_in = False
 
         self.db_session.commit()
@@ -228,10 +247,10 @@ class VendingMachine:
             status=200
         )
 
-    @verify_auth
+    @verify_auth(API_CONFIG)
     @handle_exc
     @log_endpoint
-    def get_user(self, username: str) -> Response:
+    def get_current_user(self, username: str) -> Response:
         user = self.db_session.query(User)\
             .filter_by(username=username)\
             .first()
@@ -251,14 +270,19 @@ class VendingMachine:
             status=200
         )
 
-    @verify_auth
+    @verify_auth(API_CONFIG)
     @handle_exc
     @log_endpoint
     def get_users(self) -> Response:
-        user = self.db_session.query(User)
+        users = self.db_session.query(User)
 
         return Response(
-            json.dumps(user),
+            json.dumps({
+                "users": [*map(
+                    lambda user: user.to_json(),
+                    users.all()
+                )]
+            }),
             mimetype="application/json",
             status=200
         )

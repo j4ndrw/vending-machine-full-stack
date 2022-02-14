@@ -54,3 +54,6 @@ class User(Model):
             role=self.role,
             logged_in=self.logged_in
         )
+
+    def __repr__(self):
+        return self.to_json()
