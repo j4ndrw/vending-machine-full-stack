@@ -1,21 +1,44 @@
 import { proxy } from "valtio";
+import { readLoginStatus } from "./auth/loginStatus";
 import { getCurrentUser } from "./services/getCurrentUser";
 import { getIdToken } from "./services/getIdToken";
+import { getProducts } from "./services/getProducts";
+import { Product } from "./types/product";
+import { Role } from "./types/role";
 
 interface ApplicationState {
-    funds: number;
+    deposit: number;
+    role: Role | "";
+    products: (Product & { selected?: boolean })[];
+    loggedIn: boolean;
 }
 
 export const store = proxy<ApplicationState>({
-    funds: 0,
+    deposit: 0,
+    role: "",
+    products: [],
+    loggedIn: readLoginStatus(),
 });
 
-export const fetchFunds = () => {
+export const fetchUser = () => {
     getCurrentUser()
         .then(({ data }) => {
-            store.funds = data.deposit;
+            store.deposit = data.deposit;
+            store.role = data.role;
         })
         .catch(console.error);
+};
+
+export const fetchProducts = () => {
+    getProducts()
+        .then(({ data }) => {
+            store.products = data.products;
+        })
+        .catch(console.error);
+};
+
+export const saveLoginState = (state: boolean) => {
+    store.loggedIn = state;
 };
 
 setInterval(() => {

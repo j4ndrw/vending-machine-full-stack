@@ -19,5 +19,6 @@ export async function login(username: string, password: string) {
 
     storeCredentials(response.data.token, username);
     saveLoginStatus(true);
+
     return response;
 }

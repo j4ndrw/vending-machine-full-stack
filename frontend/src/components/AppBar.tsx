@@ -1,9 +1,15 @@
-import { readLoginStatus } from "../auth/loginStatus";
+import { useSnackbar } from "notistack";
+import { useSnapshot } from "valtio";
+import { logout } from "../services/logout";
+import { updateUserRole } from "../services/updateUserRole";
+import { store } from "../store";
+import { Role } from "../types/role";
 import Funds from "./Funds";
 import SelectRole from "./SelectRole";
 
 function AppBar() {
-    const isLoggedIn = readLoginStatus();
+    const { loggedIn } = useSnapshot(store);
+    const { enqueueSnackbar } = useSnackbar();
     return (
         <div className="flex items-center justify-between p-4 w-screen bg-purple-600 fixed top-0 left-0">
             <div className="flex items-center">
@@ -11,10 +17,29 @@ function AppBar() {
                     <h1 className="font-bold no-underline  hover:text-gray-600">
                         Vending Machine
                     </h1>
-                    {isLoggedIn ? (
+                    {loggedIn ? (
                         <div className="flex justify-center items-center flex-row">
-                            <SelectRole onChange={() => {}} />
+                            <SelectRole
+                                onChange={(e) => {
+                                    updateUserRole(e.target.value as Role);
+                                }}
+                            />
                             <Funds />
+                            <button
+                                className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-700 transition duration-150 ease-in-out hover:bg-purple-600 bg-purple-700 rounded text-white px-8 py-2 text-sm"
+                                onClick={() => {
+                                    logout().then(({ data, status }) => {
+                                        enqueueSnackbar(data.message, {
+                                            variant:
+                                                status === 200
+                                                    ? "success"
+                                                    : "error",
+                                        });
+                                    });
+                                }}
+                            >
+                                Log Out
+                            </button>
                         </div>
                     ) : (
                         <></>

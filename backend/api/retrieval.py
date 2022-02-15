@@ -60,8 +60,6 @@ class Retrieval:
         product_query = self.db_session.query(Product)\
                             .filter_by(**filter_dict)
 
-        print(filter_dict)
-
         return [*map(
             lambda product: product.to_json(),
             product_query.all()

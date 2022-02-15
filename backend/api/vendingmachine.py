@@ -317,7 +317,7 @@ class VendingMachine:
 
         existing_product = self.db_session.query(Product)\
             .filter_by(
-                seller_id=user.id,
+                seller_id=user.username,
                 product_name=product_name
         )\
             .first()
@@ -528,6 +528,7 @@ class VendingMachine:
 
         username = payload["username"]
         total = payload["total"]
+        product_ids = payload["product_ids"]
 
         err = self.operation.validate_credits(total, kind="total")
         if err:
@@ -549,6 +550,8 @@ class VendingMachine:
             )
 
         user.deposit -= total
+
+        self.operation.reduce_product_stock(product_ids)
 
         self.db_session.commit()
 

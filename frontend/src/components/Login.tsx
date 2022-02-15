@@ -1,5 +1,6 @@
 import { useSnackbar } from "notistack";
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { login } from "../services/login";
 
 function Login() {
@@ -24,6 +25,7 @@ function Login() {
                                     variant:
                                         status === 200 ? "success" : "error",
                                 });
+                                flushSync(() => {});
                             })
                             .catch(console.error);
                     }}
@@ -54,9 +56,7 @@ function Login() {
                     </div>
 
                     <div className="flex justify-center items-center mt-6">
-                        <button
-                            className={`bg-blue-800 py-2 px-4 text-sm text-white rounded border border-green focus:outline-none focus:border-green-dark`}
-                        >
+                        <button className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-700 transition duration-150 ease-in-out hover:bg-indigo-600 bg-indigo-700 rounded text-white px-8 py-2 text-sm">
                             Login
                         </button>
                     </div>

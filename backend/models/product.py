@@ -38,7 +38,7 @@ class Product(Model):
     def __init__(
         self,
         *,
-        amount_available=0,
+        amount_available=1,
         cost=0,
         product_name,
         seller_id,

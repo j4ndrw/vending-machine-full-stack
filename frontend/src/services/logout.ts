@@ -1,4 +1,4 @@
-import { readCredentials } from "../auth/auth";
+import { readCredentials, storeCredentials } from "../auth/auth";
 import { saveLoginStatus } from "../auth/loginStatus";
 import { apiRoute } from "../env/apiConfig";
 import { makeRequest } from "../utility/makeRequest";
@@ -15,5 +15,7 @@ export async function logout() {
         },
     });
     saveLoginStatus(false);
+    storeCredentials("", "");
+
     return response;
 }

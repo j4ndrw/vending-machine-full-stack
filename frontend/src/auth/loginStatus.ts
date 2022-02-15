@@ -1,5 +1,8 @@
+import { saveLoginState } from "../store";
+
 export function saveLoginStatus(status: boolean) {
     localStorage.setItem("loggedIn", JSON.stringify({ status }));
+    saveLoginState(status);
 }
 
 export function readLoginStatus() {

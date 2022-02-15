@@ -15,5 +15,10 @@ export function storeCredentials(token: string, username: string = "") {
 }
 
 export function readCredentials(): { token: string; username: string } {
-    return JSON.parse(document.cookie);
+    try {
+        return JSON.parse(document.cookie);
+    } catch (e) {
+        console.error(e);
+        return { token: "", username: "" };
+    }
 }

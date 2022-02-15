@@ -27,11 +27,16 @@ def get_token_from_headers(request: Request) -> str:
 
 
 def get_username_from_request(request: Request) -> Optional[str]:
-    json_payload = request.get_json()
-    if json_payload and "username" in json_payload:
-        return json_payload["username"]
+    username = request.view_args.get("username", None)
 
-    return request.view_args.get("username", None)
+    if username:
+        return username
+
+    json_payload = request.get_json()
+    if not json_payload:
+        return None
+
+    return json_payload.get("username", None)
 
 
 def validate_jwt(
@@ -62,7 +67,8 @@ def validate_jwt(
 
             if username_from_jwt != username_from_request:
                 return Response(
-                    json.dumps({"message": "Permission Denied"}),
+                    json.dumps(
+                        {"message": "Permission Denied"}),
                     mimetype="application/json",
                     status=403
                 )
@@ -98,7 +104,11 @@ def validate_jwt(
         )
 
 
-def verify_auth(api_config: Dict, strict: bool = False, allow_expired: bool = False):
+def verify_auth(
+    api_config: Dict,
+    strict: bool = False,
+    allow_expired: bool = False
+):
     def decorator(f: Callable):
         @wraps(f)
         def wrapper(*args, **kwargs):
@@ -106,7 +116,7 @@ def verify_auth(api_config: Dict, strict: bool = False, allow_expired: bool = Fa
                 api_config["app"],
                 api_config["db_session"],
                 strict=strict,
-                allow_expired=True
+                allow_expired=allow_expired
             )
             if err:
                 return err

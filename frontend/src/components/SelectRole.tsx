@@ -6,7 +6,7 @@ interface Props {
 
 function SelectRole({ onChange }: Props) {
     return (
-        <div className="flex justify-center items-center flex-col">
+        <div className="flex justify-center items-center flex-col px-16">
             <label htmlFor="role">Select role</label>
             <select
                 id="role"

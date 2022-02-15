@@ -12,10 +12,6 @@ function Register() {
 
     const { enqueueSnackbar } = useSnackbar();
 
-    useEffect(() => {
-        console.log(role);
-    }, [role]);
-
     return (
         <div className="m-16">
             <div className="w-full max-w-md m-auto bg-indigo-900 rounded-lg border border-primaryBorder shadow-default py-10 px-16">
@@ -69,7 +65,9 @@ function Register() {
                         />
                     </div>
                     <div>
-                        <label htmlFor="confirmPassword">Password</label>
+                        <label htmlFor="confirmPassword">
+                            Confirm Password
+                        </label>
                         <input
                             type="password"
                             className={`text-black w-full p-2 text-primary border rounded-md outline-none text-sm transition duration-150 ease-in-out mb-4`}
@@ -87,7 +85,7 @@ function Register() {
 
                     <div className="flex justify-center items-center mt-6">
                         <button
-                            className={`bg-blue-800 py-2 px-4 text-sm text-white rounded border border-green focus:outline-none focus:border-green-dark`}
+                            className={`bg-purple-900 py-2 px-4 text-sm text-white rounded border border-green focus:outline-none focus:border-green-dark`}
                         >
                             Register
                         </button>

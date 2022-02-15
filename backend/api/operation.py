@@ -1,7 +1,8 @@
 import json
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from flask import Response
+from models.product import Product
 from models.role import USER_ROLES
 from sqlalchemy.orm import scoped_session
 
@@ -90,3 +91,15 @@ class Operation:
                 status=403
             )
         return None
+
+    def reduce_product_stock(self, product_ids: List[int]):
+        product_query = self.db_session.query(Product)
+        for product_id in product_ids:
+            product_query.filter_by(id=product_id)
+
+        products = product_query.all()
+        for product in products:
+            if product.amount_available <= 1:
+                self.db_session.delete(product)
+            else:
+                product.amount_available -= 1
