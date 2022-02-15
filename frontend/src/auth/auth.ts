@@ -5,18 +5,15 @@ export function storeCredentials(token: string, username: string = "") {
     // and then reconstruct the JWT in the backend.
 
     // Though, since this is a small app, I'll store the whole thing
-    // in document.cookie for now as a base64, along with the current
+    // in document.cookie for now, along with the current
     // user
 
-    document.cookie = Buffer.from(
-        JSON.stringify({
-            token,
-            username,
-        }),
-        "utf-8"
-    ).toString("base64");
+    document.cookie = JSON.stringify({
+        token,
+        username,
+    });
 }
 
 export function readCredentials(): { token: string; username: string } {
-    return JSON.parse(Buffer.from(document.cookie).toString("ascii"));
+    return JSON.parse(document.cookie);
 }

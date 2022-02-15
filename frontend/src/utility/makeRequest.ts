@@ -15,6 +15,10 @@ export async function makeRequest(
         return makeMonadic(
             fetch(url, {
                 ...options,
+                headers: {
+                    ...options.headers,
+                    "Content-Type": "application/json",
+                },
                 body: JSON.stringify(options.body),
             })
         );
