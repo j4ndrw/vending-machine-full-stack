@@ -37,7 +37,8 @@ def get_username_from_request(request: Request) -> Optional[str]:
 def validate_jwt(
     app: Flask,
     db_session: scoped_session,
-    strict: bool = False
+    strict: bool = False,
+    allow_expired: bool = False
 ):
     token = None
     # jwt is passed in the request header
@@ -78,12 +79,15 @@ def validate_jwt(
             )
 
     except jwt.exceptions.ExpiredSignatureError:
-        return Response(
-            json.dumps(
-                {'message': 'Session expired. Please login again.'}),
-            mimetype="application/json",
-            status=409
-        )
+        if allow_expired:
+            pass
+        else:
+            return Response(
+                json.dumps(
+                    {'message': 'Session expired. Please login again.'}),
+                mimetype="application/json",
+                status=409
+            )
 
     except Exception as e:
         traceback.print_exc()
@@ -94,14 +98,15 @@ def validate_jwt(
         )
 
 
-def verify_auth(api_config: Dict, strict: bool = False):
+def verify_auth(api_config: Dict, strict: bool = False, allow_expired: bool = False):
     def decorator(f: Callable):
         @wraps(f)
         def wrapper(*args, **kwargs):
             err = validate_jwt(
                 api_config["app"],
                 api_config["db_session"],
-                strict=strict
+                strict=strict,
+                allow_expired=True
             )
             if err:
                 return err

@@ -1,18 +1,17 @@
-import datetime
 import json
-from typing import Dict
+from typing import Dict, Optional
 
-import jwt
 from flask import Flask, Response, request
-from api.operation import Operation
-from api.retrieval import Retrieval
 from models.product import Product
-from models.role import USER_ROLES
 from models.user import User
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from api.auth.auth import create_token, get_token_from_headers, hash_password, verify_auth
+from api.auth.auth import (create_token, get_token_from_headers, hash_password,
+                           verify_auth)
+from api.operation import Operation
+from api.retrieval import Retrieval
 from api.utils import handle_exc, log_endpoint
 
 API_CONFIG = {
@@ -22,33 +21,39 @@ API_CONFIG = {
 
 
 class VendingMachine:
-    def __init__(self, app: Flask):
+    def __init__(
+        self,
+        app: Optional[Flask] = None,
+        engine: Optional[Engine] = None,
+        db_session: Optional[scoped_session] = None
+    ):
         self.app = app
-
-        # Init engine
-        self.engine = create_engine(
-            app.config['DATABASE_URI'],
-            convert_unicode=True,
-            echo=True
-        )
-
-        # Init session
-        self.db_session = scoped_session(
-            sessionmaker(
-                autocommit=False,
-                autoflush=True,
-                bind=self.engine
+        if app:
+            self.engine = create_engine(
+                app.config['DATABASE_URI'],
+                convert_unicode=True,
+                echo=True
             )
-        )
+            self.db_session = scoped_session(
+                sessionmaker(
+                    autocommit=False,
+                    autoflush=True,
+                    bind=self.engine
+                )
+            )
+        else:
+            self.engine = engine
+            self.db_session = db_session
 
         API_CONFIG.update({
             "app": self.app,
             "db_session": self.db_session
         })
 
-        # Create tables from schemas if they don't exist
-        User.metadata.create_all(bind=self.engine)
-        Product.metadata.create_all(bind=self.engine)
+        if self.engine:
+            # Create tables from schemas if they don't exist
+            User.metadata.create_all(bind=self.engine)
+            Product.metadata.create_all(bind=self.engine)
 
         self.retrieval = Retrieval(self.db_session)
         self.operation = Operation(self.db_session)
@@ -95,7 +100,7 @@ class VendingMachine:
             status=200
         )
 
-    @verify_auth(API_CONFIG, strict=True)
+    @verify_auth(API_CONFIG, strict=True, allow_expired=True)
     @handle_exc
     @log_endpoint
     def refresh_token(self, username: str) -> Response:
@@ -493,26 +498,15 @@ class VendingMachine:
         if err:
             return err
 
-        if deposit <= 0:
-            return Response(
-                json.dumps(
-                    {"message": "The deposit must be a positive amount"}),
-                mimetype="application/json",
-                status=400
-            )
-
         user, err = self.retrieval.get_user(username)
         if err:
             return err
 
-        if user.role != "buyer":
-            return Response(
-                json.dumps({"message": "Only buyers can deposit money!"}),
-                mimetype="application/json",
-                status=403
-            )
+        err = self.operation.validate_depositer_role(user.role)
+        if err:
+            return err
 
-        user.deposit = deposit
+        user.deposit += deposit
 
         self.db_session.commit()
 
@@ -536,24 +530,13 @@ class VendingMachine:
         if err:
             return err
 
-        if total <= 0:
-            return Response(
-                json.dumps(
-                    {"message": "The total must be a positive amount"}),
-                mimetype="application/json",
-                status=400
-            )
-
         user, err = self.retrieval.get_user(username)
         if err:
             return err
 
-        if user.role != "buyer":
-            return Response(
-                json.dumps({"message": "Only buyers can buy!"}),
-                mimetype="application/json",
-                status=403
-            )
+        err = self.operation.validate_buyer_role(user.role)
+        if err:
+            return err
 
         if user.deposit < total:
             return Response(
@@ -568,7 +551,10 @@ class VendingMachine:
 
         return Response(
             json.dumps(
-                {"message": f"Thank you for purchasing from us!"}),
+                {
+                    "message": f"Thank you for purchasing from us!",
+                    "amount_spent": total
+                }),
             mimetype="application/json",
             status=200
         )
@@ -585,13 +571,9 @@ class VendingMachine:
         if err:
             return err
 
-        if user.role != "buyer":
-            return Response(
-                json.dumps(
-                    {"message": "Only buyers can reset their deposit!"}),
-                mimetype="application/json",
-                status=403
-            )
+        err = self.operation.validate_depositer_role(user.role)
+        if err:
+            return err
 
         user.deposit = 0
 
