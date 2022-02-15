@@ -1,12 +1,14 @@
 import { useState } from "react";
 
 interface Props {
-    onAddFunds: (amount: number) => void;
+    onAddProduct: (name: string, cost: number) => void;
     onClose: () => void;
 }
 
-function AddFundsModal({ onAddFunds, onClose }: Props) {
-    const [amount, setAmount] = useState<number>(5);
+function AddProductModal({ onAddProduct, onClose }: Props) {
+    const [cost, setCost] = useState<number>(0);
+    const [name, setName] = useState<string>("");
+
     return (
         <div
             className="py-12 transition duration-150 ease-in-out z-20 absolute top-0 right-0 bottom-0 left-0"
@@ -18,32 +20,49 @@ function AddFundsModal({ onAddFunds, onClose }: Props) {
             >
                 <div className="relative py-8 px-5 md:px-10 bg-indigo-900 shadow-md rounded-xl border-2 border-white">
                     <h1 className="text-white font-lg font-bold tracking-normal leading-tight mb-4">
-                        Add funds
+                        Add product
                     </h1>
                     <div className="flex justify-center items-start flex-col">
                         <label
-                            htmlFor="amount"
+                            htmlFor="cost"
                             className="text-white text-sm font-bold leading-tight tracking-normal"
                         >
-                            Amount
+                            Cost
                         </label>
-                        <select
-                            className="bg-indigo-900 my-4"
-                            id="amount"
+                        <input
+                            id="cost"
+                            className="text-gray-600 focus:outline-none focus:border focus:border-indigo-700 font-normal w-full h-10 flex items-center pl-16 text-sm border-gray-300 rounded border"
+                            type="number"
+                            placeholder="Your product's cost"
                             onChange={(e) => {
-                                setAmount(Number(e.target.value));
+                                if (isNaN(Number(e.target.value))) {
+                                    setCost(0);
+                                } else {
+                                    setCost(Number(e.target.value));
+                                }
                             }}
+                        />
+                    </div>
+                    <div className="flex justify-center items-start flex-col">
+                        <label
+                            htmlFor="name"
+                            className="text-white text-sm font-bold leading-tight tracking-normal"
                         >
-                            <option value={5}>5</option>
-                            <option value={10}>10</option>
-                            <option value={20}>20</option>
-                            <option value={50}>50</option>
-                            <option value={100}>100</option>
-                        </select>
+                            Name
+                        </label>
+                        <input
+                            id="name"
+                            className="text-gray-600 focus:outline-none focus:border focus:border-indigo-700 font-normal w-full h-10 flex items-center pl-16 text-sm border-gray-300 rounded border"
+                            type="text"
+                            placeholder="Your product's name"
+                            onChange={(e) => {
+                                setName(e.target.value);
+                            }}
+                        />
                     </div>
                     <div className="flex items-center justify-start w-full mt-4">
                         <button
-                            onClick={() => onAddFunds(amount)}
+                            onClick={() => onAddProduct(name, cost)}
                             className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-700 transition duration-150 ease-in-out hover:bg-indigo-600 bg-indigo-700 rounded text-white px-8 py-2 text-sm"
                         >
                             Submit
@@ -61,4 +80,4 @@ function AddFundsModal({ onAddFunds, onClose }: Props) {
     );
 }
 
-export default AddFundsModal;
+export default AddProductModal;

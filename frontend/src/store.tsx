@@ -3,6 +3,7 @@ import { readLoginStatus } from "./auth/loginStatus";
 import { getCurrentUser } from "./services/getCurrentUser";
 import { getIdToken } from "./services/getIdToken";
 import { getProducts } from "./services/getProducts";
+import { getProductsFromUser } from "./services/getProductsFromUser";
 import { Product } from "./types/product";
 import { Role } from "./types/role";
 
@@ -35,6 +36,12 @@ export const fetchProducts = () => {
             store.products = data.products;
         })
         .catch(console.error);
+};
+
+export const fetchProductsFromUser = () => {
+    getProductsFromUser().then(({ data }) => {
+        store.products = data.products;
+    });
 };
 
 export const saveLoginState = (state: boolean) => {

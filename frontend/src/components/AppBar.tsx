@@ -2,7 +2,7 @@ import { useSnackbar } from "notistack";
 import { useSnapshot } from "valtio";
 import { logout } from "../services/logout";
 import { updateUserRole } from "../services/updateUserRole";
-import { store } from "../store";
+import { fetchUser, store } from "../store";
 import { Role } from "../types/role";
 import Funds from "./Funds";
 import SelectRole from "./SelectRole";
@@ -21,7 +21,11 @@ function AppBar() {
                         <div className="flex justify-center items-center flex-row">
                             <SelectRole
                                 onChange={(e) => {
-                                    updateUserRole(e.target.value as Role);
+                                    updateUserRole(e.target.value as Role).then(
+                                        () => {
+                                            fetchUser();
+                                        }
+                                    );
                                 }}
                             />
                             <Funds />

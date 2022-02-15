@@ -1,6 +1,6 @@
 import useProducts from "../hooks/useProducts";
 
-import { DataGrid, GridRowsProp, GridColDef } from "@mui/x-data-grid";
+import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { useState } from "react";
 import { buy } from "../services/buy";
 import { useSnackbar } from "notistack";
