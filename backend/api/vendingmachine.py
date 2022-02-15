@@ -117,6 +117,7 @@ class VendingMachine:
             json.dumps({
                 "message": "Token refreshed",
                 "token": token,
+                "username": username
             }),
             mimetype="application/json",
             status=200
@@ -312,6 +313,8 @@ class VendingMachine:
         if err:
             return err
 
+        err = self.operation.validate_seller_role(user.role)
+
         existing_product = self.db_session.query(Product)\
             .filter_by(
                 seller_id=user.id,
@@ -400,7 +403,7 @@ class VendingMachine:
     @verify_auth(API_CONFIG)
     @handle_exc
     @log_endpoint
-    def update_product(self, product_id: str) -> Response:
+    def delete_product(self, product_id: str) -> Response:
         payload = request.get_json()
 
         username = payload["username"]
@@ -440,7 +443,7 @@ class VendingMachine:
     @verify_auth(API_CONFIG)
     @handle_exc
     @log_endpoint
-    def delete_product(self, product_id: str):
+    def update_product(self, product_id: str):
         payload = request.get_json()
 
         username = payload["username"]

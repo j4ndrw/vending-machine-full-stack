@@ -1,5 +1,6 @@
-from functools import wraps
+import json
 import traceback
+from functools import wraps
 from typing import Callable, Dict, List
 from urllib.request import Request
 
@@ -15,14 +16,21 @@ def handle_exc(func: Callable):
         try:
             f = func(*args, **kwargs)
             return f
-        except:
-            return Response(traceback.format_exc(), 500)
+        except Exception:
+            traceback.print_exc()
+            return Response(
+                json.dumps({
+                    "message": "An error occured"
+                }),
+                mimetype="application/json",
+                status=500
+            )
 
     return wrapper
 
 
 def log_endpoint(func: Callable):
-    @wraps(func)
+    @ wraps(func)
     def wrapper(*args, **kwargs):
         print(f"\n\n\t\t\t**Running {func.__name__} endpoint**\n\n")
         return func(*args, **kwargs)

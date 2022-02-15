@@ -81,3 +81,12 @@ class Operation:
                 status=403
             )
         return None
+
+    def validate_seller_role(self, role: str) -> Optional[Error]:
+        if role != "seller":
+            return Response(
+                json.dumps({"message": "Only seller can create products!"}),
+                mimetype="application/json",
+                status=403
+            )
+        return None
